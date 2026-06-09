@@ -5,7 +5,10 @@ import {
 } from 'recharts'
 import StatCard from './components/StatCard'
 import api from '@/config/api'
-import type { DashboardStats, Team } from '@/types'
+import type { DashboardStats } from '@/types'
+
+// ─── Local types ─────────────────────────────────────────────────────────────
+interface BarEntry { name: string; score: number; votes: number }
 
 // ─── Mock data (diganti hit API saat BE ready) ──────────────────────────────
 const MOCK_STATS: DashboardStats = {
@@ -15,7 +18,7 @@ const MOCK_STATS: DashboardStats = {
     averageScore: 78.4,
 }
 
-const MOCK_BAR: { name: string; score: number; votes: number }[] = [
+const MOCK_BAR: BarEntry[] = [
     { name: 'A', score: 85, votes: 18 },
     { name: 'B', score: 72, votes: 14 },
     { name: 'C', score: 91, votes: 22 },
@@ -33,7 +36,7 @@ const MOCK_PIE = [
 
 // ─── Fetchers ────────────────────────────────────────────────────────────────
 const fetchStats = () => api.get<DashboardStats>('/admin/stats').then(r => r.data)
-const fetchScores = () => api.get<Team[]>('/admin/scores/bar').then(r => r.data)
+const fetchScores = () => api.get<BarEntry[]>('/admin/scores/bar').then(r => r.data)
 
 export default function DashboardPage() {
     const stats = useQuery({ queryKey: ['dashboard-stats'], queryFn: fetchStats, placeholderData: MOCK_STATS })
