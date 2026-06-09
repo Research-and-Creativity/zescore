@@ -201,15 +201,30 @@
   --color-shadow-500: rgba(112, 144, 176, 0.08);
 }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   BASE STYLES
-───────────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Zetech Brand Colors */
+  --zetech-blue:   #1B3FA0;
+  --zetech-navy:   #0D1B4B;
+  --zetech-accent: #4F8EF7;
+  --zetech-light:  #EEF3FF;
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
+  /* Sidebar */
+  --sidebar-bg: #0D1B4B;
+  --sidebar-width: 260px;
+  --sidebar-collapsed: 72px;
+
+  /* Admin UI */
+  --card-bg:    #ffffff;
+  --card-border: #E8EEFE;
+  --body-bg:    #F4F7FE;
+  --text-primary: #1B254B;
+  --text-secondary: #A0AEC0;
+
+  --shadow-card: 0px 18px 40px rgba(112, 144, 176, 0.12);
+  --shadow-btn:  0px 4px 16px rgba(79, 142, 247, 0.35);
 }
+
+* { box-sizing: border-box; }
 
 html {
   height: 100%;
@@ -221,6 +236,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
   height: 100%;
   margin: 0;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  background: var(--body-bg);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
 }
 
 #root {

@@ -12,22 +12,15 @@
     "moduleDetection": "force",
     "noEmit": true,
     "jsx": "react-jsx",
-    "strict": true,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
+
+    /* Linting */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    "ignoreDeprecations": "6.0",
-    "baseUrl": "src",
+
     "paths": {
-      "components/*": ["components/*"],
-      "features/*": ["features/*"],
-      "layouts/*": ["layouts/*"],
-      "store/*": ["store/*"],
-      "config/*": ["config/*"],
-      "types/*": ["types/*"],
-      "utils/*": ["utils/*"],
-      "views/*": ["features/*"],
-      "routes": ["routes.tsx"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src"]
