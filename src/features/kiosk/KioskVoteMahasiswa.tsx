@@ -1,124 +1,142 @@
 // src/features/kiosk/KioskVoteMahasiswa.tsx
 import React, { useState } from 'react';
-import { useKioskStore } from '../../store/useKioskStore';
-
-interface ProjectGroup {
-  readonly id: number;
-  readonly stanNumber: string;
-  readonly title: string;
-  readonly category: string;
-}
-
-// Data dummy kelompok pameran untuk keperluan simulasi expo
-const DUMMY_GROUPS: readonly ProjectGroup[] = [
-  { id: 1, stanNumber: "A01", title: "Smart Trash Can IoT", category: "Hardware & IoT" },
-  { id: 2, stanNumber: "A02", title: "E-Learning Gamification", category: "Web Application" },
-  { id: 3, stanNumber: "B01", title: "Mental Health AI Tracker", category: "Mobile Application" },
-  { id: 4, stanNumber: "B02", title: "SaaS Point of Sales (POS)", category: "Web Application" },
-  { id: 5, stanNumber: "C01", title: "Augmented Reality History Book", category: "Multimedia & AR" },
-  { id: 6, stanNumber: "C02", title: "Crypto Portfolio Analytics", category: "Cybersecurity & Blockchain" },
-];
+import { useKioskStore } from '@/store/useKioskStore';
+import api from '@/config/api';
 
 /**
- * KioskVoteMahasiswa Component.
- * Provides an interactive grid interface for students to cast their vote for expo projects.
+ * KioskVoteMahasiswa — konfirmasi vote ke tim stand ini.
+ *
+ * Setelah participant login, teamContext sudah tersimpan di store.
+ * Mahasiswa tidak perlu pilih kelompok lagi — kiosk sudah terkunci
+ * ke stand tertentu. Halaman ini hanya menampilkan info tim dan
+ * tombol konfirmasi.
  */
 const KioskVoteMahasiswa: React.FC = () => {
-  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
-  const { setStep, resetKiosk } = useKioskStore();
+  const { evaluator, teamContext, setStep, resetKiosk } = useKioskStore();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleConfirmVote = () => {
-    if (selectedGroupId === null) return;
-    
-    // Proses pencatatan vote tim Dev 2 bisa ditaruh di sini nantinya.
-    // Untuk alur sekarang, langsung alihkan ke halaman sukses.
-    setStep('SUCCESS');
+  // Guard: seharusnya tidak terjadi kalau alur benar,
+  // tapi tampilkan fallback jika teamContext belum ada
+  if (!teamContext) {
+    return (
+      <div className="w-full max-w-sm bg-white border border-red-200 rounded-3xl p-10 text-center">
+        <p className="text-sm font-semibold text-red-600 mb-4">
+          Sesi kiosk tidak valid. Silakan login ulang sebagai tim peserta.
+        </p>
+        <button
+          onClick={resetKiosk}
+          className="text-xs font-bold text-slate-500 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 transition-all"
+        >
+          Kembali ke Awal
+        </button>
+      </div>
+    );
+  }
+
+  const handleConfirmVote = async () => {
+    if (!evaluator) return;
+    setLoading(true);
+    setError(null);
+
+    try {
+      await api.post('/kiosk/vote-student', {
+        evaluatorId: evaluator.idNumber,
+        projectId: teamContext.teamId,
+      });
+      setStep('SUCCESS');
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })
+        .response?.data?.message;
+      setError(msg || 'Gagal menyimpan vote. Coba lagi.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="w-full max-w-5xl bg-white border border-slate-200/80 rounded-3xl p-10 shadow-xl shadow-slate-200/50 transition-all duration-300 flex flex-col h-[85vh]">
-      
-      {/* Header Halaman */}
-      <div className="text-center mb-8 shrink-0">
+    <div className="w-full max-w-md bg-white border border-slate-200/80 rounded-3xl p-10 transition-all duration-300">
+
+      {/* Header */}
+      <div className="text-center mb-8">
         <span className="bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1 rounded-full text-xs font-black tracking-wide uppercase">
-          Kiosk Voting Mahasiswa
+          Konfirmasi Vote
         </span>
         <h2 className="text-3xl font-black text-slate-900 tracking-tight mt-3">
-          Pilih Kelompok Terfavorit
+          Vote Kelompok
         </h2>
-        <p className="text-sm text-slate-500 mt-1">
-          Ketuk salah satu kartu kelompok di bawah ini, kemudian tekan tombol konfirmasi di bawah.
+        {evaluator?.name && (
+          <p className="text-sm text-slate-500 mt-1">
+            Halo, <span className="font-semibold text-slate-700">{evaluator.name}</span>!
+          </p>
+        )}
+      </div>
+
+      {/* Kartu tim — info stand yang sudah terkunci */}
+      <div className="bg-blue-50/60 border-2 border-blue-200 rounded-2xl p-6 mb-8 text-center">
+        <div className="inline-flex items-center gap-1.5 bg-blue-600 text-white text-xs font-black px-3 py-1 rounded-lg tracking-wider mb-3">
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          STAN {teamContext.boothNumber}
+        </div>
+        <h3 className="text-2xl font-black text-blue-950 tracking-tight leading-tight">
+          {teamContext.teamName}
+        </h3>
+        <p className="text-xs text-blue-500 mt-2 font-medium">
+          Anda akan memberikan 1 suara untuk tim ini
         </p>
       </div>
 
-      {/* Grid Kartu Kelompok (Scrollable jika data banyak) */}
-      <div className="flex-1 overflow-y-auto pr-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-8 content-start">
-        {DUMMY_GROUPS.map((group) => {
-          const isSelected = selectedGroupId === group.id;
-          return (
-            <button
-              key={group.id}
-              onClick={() => setSelectedGroupId(group.id)}
-              className={`w-full text-left p-6 rounded-2xl border transition-all duration-200 relative group flex flex-col justify-between h-44 ${
-                isSelected
-                  ? 'bg-blue-50/50 border-blue-600 ring-2 ring-blue-600/20 shadow-md'
-                  : 'bg-slate-50/50 border-slate-200 hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm'
-              }`}
-            >
-              {/* Atas: Nomor Stan & Kategori */}
-              <div className="flex justify-between items-start w-full">
-                <span className={`font-mono text-xs font-black px-2.5 py-1 rounded-lg border tracking-wider ${
-                  isSelected ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500 border-slate-200'
-                }`}>
-                  STAN {group.stanNumber}
-                </span>
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
-                  {group.category}
-                </span>
-              </div>
+      {/* Error */}
+      {error && (
+        <div className="flex items-center gap-2 text-xs px-4 py-3 rounded-xl mb-4 bg-red-50 border border-red-200 text-red-600">
+          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          {error}
+        </div>
+      )}
 
-              {/* Tengah: Judul Proyek */}
-              <h3 className={`text-lg font-black tracking-tight leading-snug mt-3 line-clamp-2 ${
-                isSelected ? 'text-blue-950' : 'text-slate-800 group-hover:text-slate-900'
-              }`}>
-                {group.title}
-              </h3>
+      {/* Catatan penting */}
+      <p className="text-[11px] text-slate-400 text-center mb-6 leading-relaxed">
+        Vote bersifat permanen dan tidak dapat diubah.<br />
+        Pastikan pilihan Anda sudah benar sebelum konfirmasi.
+      </p>
 
-              {/* Indikator Checkmark jika Terpilih */}
-              {isSelected && (
-                <div className="absolute top-3 right-3 w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center shadow-sm animate-scale-up">
-                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-              )}
-            </button>
-          );
-        })}
-      </div>
+      {/* Aksi */}
+      <div className="flex flex-col gap-3">
+        <button
+          onClick={handleConfirmVote}
+          disabled={loading}
+          className="w-full py-4 rounded-2xl bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-black text-base tracking-wide transition-all duration-150 active:scale-[0.98] flex items-center justify-center gap-2"
+        >
+          {loading ? (
+            <>
+              <svg className="animate-spin w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 1 1-6.219-8.56" />
+              </svg>
+              Menyimpan Vote...
+            </>
+          ) : (
+            <>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+              </svg>
+              Ya, Saya Vote Tim Ini!
+            </>
+          )}
+        </button>
 
-      {/* Footer / Panel Kontrol Aksi */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-slate-100 shrink-0">
         <button
           onClick={resetKiosk}
-          className="w-full sm:w-auto px-6 py-3 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-all active:scale-[0.98]"
+          disabled={loading}
+          className="w-full py-3 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-all active:scale-[0.98] disabled:opacity-40"
         >
           Batalkan & Keluar
         </button>
-
-        <button
-          onClick={handleConfirmVote}
-          disabled={selectedGroupId === null}
-          className={`w-full sm:w-auto px-10 py-3.5 rounded-xl font-black text-sm tracking-wide shadow-lg transition-all duration-150 active:scale-[0.98] ${
-            selectedGroupId !== null
-              ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-600/10'
-              : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
-          }`}
-        >
-          Konfirmasi Pilihan Vote
-        </button>
       </div>
-
     </div>
   );
 };

@@ -1,50 +1,67 @@
 // src/features/kiosk/KioskSuccess.tsx
-import React, { useEffect } from 'react';
-import { useKioskStore } from '../../store/useKioskStore';
+import React, { useEffect, useState } from 'react'
+import { useKioskStore } from '@/store/useKioskStore'
 
-/**
- * KioskSuccess Component.
- * Displays a lightweight thank-you screen that auto-resets back to the login frame.
- */
 const KioskSuccess: React.FC = () => {
-  const { resetKiosk } = useKioskStore();
+  const { teamContext, evaluator, resetKiosk } = useKioskStore()
+  const [countdown, setCountdown] = useState(5)
 
-  // Otomatis reset aplikasi kembali ke form identitas utama setelah 4 detik
   useEffect(() => {
-    const timer = setTimeout(() => {
-      resetKiosk();
-    }, 4000);
-    return () => clearTimeout(timer);
-  }, [resetKiosk]);
+    const timer = setInterval(() => {
+      setCountdown(c => {
+        if (c <= 1) { clearInterval(timer); resetKiosk(); return 0 }
+        return c - 1
+      })
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [resetKiosk])
+
+  const isStudent = evaluator?.type === 'STUDENT'
 
   return (
-    <div className="text-center p-12 bg-white border border-slate-200/80 rounded-3xl max-w-md shadow-xl shadow-slate-200/50 animate-fade-in">
-      <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-inner animate-bounce">
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      </div>
-      <h1 className="text-2xl font-black text-slate-900 tracking-tight">Evaluasi Berhasil Dikirim!</h1>
-      <p className="text-sm text-slate-500 mt-3 leading-relaxed">
-        Terima kasih telah berpartisipasi dalam menilai proyek pameran. Pilihan Anda sangat berharga bagi perkembangan riset mahasiswa.
-      </p>
-      
-      <div className="mt-8 pt-6 border-t border-slate-100 flex flex-col items-center gap-3">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-slate-300 animate-ping" />
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-            Kembali ke awal secara otomatis...
-          </span>
+    <div className="w-full max-w-sm text-center">
+      <div className="bg-white rounded-3xl border border-slate-200 p-10">
+        {/* Success icon */}
+        <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"
+          style={{ background: 'linear-gradient(135deg, #16a34a, #4ade80)' }}>
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
         </div>
-        <button 
-          onClick={resetKiosk} 
-          className="text-xs font-bold text-slate-500 hover:text-slate-700 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 transition-all"
-        >
-          Kembali Sekarang
+
+        <h2 className="text-2xl font-black text-slate-900 mb-2">
+          {isStudent ? 'Vote Tercatat! 🎉' : 'Penilaian Tersimpan! 🎉'}
+        </h2>
+        <p className="text-sm text-slate-500 mb-1">
+          Terima kasih, <span className="font-semibold text-slate-700">{evaluator?.name}</span>
+        </p>
+        {teamContext && (
+          <p className="text-sm text-slate-500 mb-6">
+            {isStudent ? 'Suara kamu untuk' : 'Penilaian untuk'}{' '}
+            <span className="font-bold" style={{ color: 'var(--zetech-blue)' }}>
+              {teamContext.teamName}
+            </span>{' '}
+            berhasil disimpan.
+          </p>
+        )}
+
+        {/* Countdown */}
+        <div className="flex flex-col items-center gap-2">
+          <div className="w-12 h-12 rounded-full border-4 flex items-center justify-center font-black text-xl"
+            style={{ borderColor: 'var(--zetech-accent)', color: 'var(--zetech-blue)' }}>
+            {countdown}
+          </div>
+          <p className="text-xs text-slate-400">Layar reset otomatis dalam {countdown} detik</p>
+        </div>
+
+        <button onClick={resetKiosk}
+          className="mt-6 w-full py-3 rounded-2xl text-sm font-bold text-white transition-all active:scale-[0.98]"
+          style={{ background: 'linear-gradient(135deg, var(--zetech-blue), var(--zetech-accent))' }}>
+          Reset Sekarang
         </button>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default KioskSuccess;
+export default KioskSuccess

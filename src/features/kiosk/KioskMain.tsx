@@ -1,116 +1,119 @@
 // src/features/kiosk/KioskMain.tsx
-import React, { useState, useEffect } from 'react';
-import { useKioskStore } from '../../store/useKioskStore';
-import type { EvaluatorType } from '../../store/useKioskStore'; // Perbaikan: Gunakan type-only import di sini
+import React, { useState } from 'react'
+import { useKioskStore } from '@/store/useKioskStore'
+import api from '@/config/api'
 
-/**
- * KioskMain component.
- * Features a high-visibility input form for evaluator identification (NIM/NIDN).
- * Includes auto-detection of evaluator types based on character length constraints.
- */
 const KioskMain: React.FC = () => {
-  const [idInput, setIdInput] = useState<string>('');
-  const [detectedType, setDetectedType] = useState<EvaluatorType>(null);
-  const [error, setError] = useState<string | null>(null);
-  
-  const { setEvaluator, setStep } = useKioskStore();
+  const { teamContext, setEvaluator, setStep } = useKioskStore()
+  const [idInput, setIdInput] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
 
-  // Efek samping untuk mendeteksi tipe penilai secara otomatis berdasarkan panjang karakter input
-  useEffect(() => {
-    const cleanInput = idInput.trim();
-    if (cleanInput.length === 12) {
-      setDetectedType('MAHASISWA');
-      setError(null);
-    } else if (cleanInput.length === 10) {
-      setDetectedType('DOSEN');
-      setError(null);
-    } else {
-      setDetectedType(null);
+  // Tidak ada deteksi tipe di FE — sepenuhnya dari validasi BE (cek role di DB)
+  const canSubmit = idInput.trim().length >= 7
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!teamContext) { setError('Stand belum terkunci. Hubungi panitia.'); return }
+    setError(null)
+    setLoading(true)
+    try {
+      const { data } = await api.post('/kiosk/validate-evaluator', {
+        idNumber: idInput.trim(),
+        teamId: teamContext.teamId,
+      })
+      setEvaluator({
+        idNumber: data.data.idNumber,
+        name: data.data.name,
+        type: data.data.type,
+        remaining: data.data.remaining,
+      })
+      setStep('CATEGORY_SELECT')
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } }).response?.data?.message
+      setError(msg ?? 'Terjadi kesalahan. Coba lagi.')
+    } finally {
+      setLoading(false)
     }
-  }, [idInput]);
-
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const finalInput = idInput.trim();
-
-    // Validasi awal kepatuhan panjang karakter
-    if (!detectedType) {
-      setError('Nomor identitas tidak valid. NIM harus 12 digit, NIDN harus 10 digit.');
-      return;
-    }
-
-    // Daftarkan data ke Zustand store global
-    setEvaluator(finalInput, detectedType);
-
-    // Alihkan halaman berdasarkan tipe yang terdeteksi otomatis
-    if (detectedType === 'MAHASISWA') {
-      setStep('VOTE_MAHASISWA');
-    } else if (detectedType === 'DOSEN') {
-      setStep('SCORE_DOSEN');
-    }
-  };
+  }
 
   return (
-    <div className="w-full max-w-xl bg-white border border-slate-200/80 rounded-3xl p-10 shadow-xl shadow-slate-200/50 transition-all duration-300">
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-black text-slate-900 tracking-tight">
-          Selamat Datang Penilai
-        </h2>
-        <p className="text-sm text-slate-500 mt-2 leading-relaxed">
-          Silakan masukkan NIM atau NIDN Anda untuk mulai menilai.
-        </p>
-      </div>
+    <div className="w-full max-w-lg">
+      {/* Stand badge */}
+      {teamContext && (
+        <div className="flex items-center justify-center gap-2 mb-8">
+          <div className="flex items-center gap-2 px-5 py-2.5 rounded-2xl text-white text-sm font-bold"
+            style={{ background: 'linear-gradient(135deg, var(--zetech-blue), var(--zetech-accent))' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
+            Stand {teamContext.boothNumber} — {teamContext.teamName}
+          </div>
+        </div>
+      )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <label htmlFor="id-number" className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-            Nomor Identitas (NIM / NIDN)
-          </label>
-          <input
-            id="id-number"
-            type="text"
-            pattern="[0-9]*"
-            inputMode="numeric"
-            maxLength={12}
-            value={idInput}
-            onChange={(e) => setIdInput(e.target.value.replace(/\D/g, ''))}
-            placeholder="Contoh: 103122400013 atau 20850012"
-            className="w-full text-center text-2xl font-mono font-bold tracking-widest p-4 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-300 placeholder:tracking-normal focus:outline-none focus:border-slate-400 focus:bg-white transition-all duration-200 shadow-inner"
-            autoFocus
-            required
-          />
+      <div className="bg-white rounded-3xl border border-slate-200 p-10">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+            style={{ background: 'var(--zetech-light)' }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
+              style={{ color: 'var(--zetech-blue)' }}>
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Masukkan Identitas</h2>
+          <p className="text-sm text-slate-500 mt-2">Input NIM (mahasiswa) atau NIDN (dosen juri)</p>
         </div>
 
-        {/* Tanda Deteksi Otomatis - Responsif Terhadap State */}
-        {detectedType && (
-          <div className="flex justify-center animate-fade-in">
-            <span className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-black tracking-wide uppercase shadow-sm border ${
-              detectedType === 'MAHASISWA' 
-                ? 'bg-blue-50 text-blue-700 border-blue-200' 
-                : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-            }`}>
-              <div className={`w-1.5 h-1.5 rounded-full ${detectedType === 'MAHASISWA' ? 'bg-blue-600' : 'bg-emerald-600'}`} />
-              Terdeteksi Sebagai: {detectedType}
-            </span>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={12}
+              value={idInput}
+              onChange={e => { setIdInput(e.target.value.replace(/\D/g, '')); setError(null) }}
+              placeholder="Ketik NIM atau NIDN..."
+              autoFocus
+              className="w-full text-center text-3xl font-mono font-bold tracking-widest py-5 px-4 rounded-2xl bg-slate-50 border-2 border-slate-200 text-slate-900 placeholder:text-slate-300 placeholder:text-xl placeholder:tracking-normal focus:outline-none focus:border-blue-400 focus:bg-white transition-all"
+              required
+            />
           </div>
-        )}
 
-        {/* Notifikasi Error Validasi Awal */}
-        {error && (
-          <p className="text-xs font-semibold text-red-600 text-center bg-red-50 py-2.5 px-4 rounded-xl border border-red-200 animate-shake">
-            {error}
-          </p>
-        )}
+          {/* Hint panjang input */}
+          {idInput.length > 0 && idInput.length < 7 && (
+            <p className="text-center text-xs" style={{ color: 'var(--text-secondary)' }}>
+              Minimal 7 digit
+            </p>
+          )}
 
-        <button
-          type="submit"
-          className="w-full py-4 px-6 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-base tracking-wide transition-all duration-150 active:scale-[0.98] shadow-lg shadow-slate-900/10"
-        >
-          Lanjutkan Evaluasi
-        </button>
-      </form>
+          {error && (
+            <div className="flex items-start gap-2 px-4 py-3 rounded-xl text-xs font-semibold"
+              style={{ background: '#FEF2F2', color: '#DC2626' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 mt-0.5">
+                <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              {error}
+            </div>
+          )}
+
+          <button type="submit" disabled={loading || !canSubmit}
+            className="w-full py-4 rounded-2xl text-white font-bold text-base tracking-wide transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ background: 'linear-gradient(135deg, var(--zetech-blue), var(--zetech-accent))' }}>
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                </svg>
+                Memverifikasi...
+              </span>
+            ) : 'Lanjutkan →'}
+          </button>
+        </form>
+      </div>
     </div>
-  );
-};
+  )
+}
 
-export default KioskMain;
+export default KioskMain
