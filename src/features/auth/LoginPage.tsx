@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import api from '@/config/api'
-import  { isAxiosError } from 'axios'
 
 type LoginMode = 'admin' | 'participant'
 
@@ -20,20 +19,38 @@ export default function LoginPage() {
         setError('')
         setLoading(true)
         try {
-            const endpoint = mode === 'admin' ? '/auth/admin/login' : '/auth/participant/login'
-            const { data } = await api.post(endpoint, {
-                ...(mode === 'admin'
-                    ? { email: form.identifier, password: form.password }
-                    : { teamCode: form.identifier, password: form.password }),
-            })
-            setAuth(data.user, data.token)
-            navigate(mode === 'admin' ? '/admin/dashboard' : '/kiosk')
-        } catch (err) {
-            if (isAxiosError(err)) {
-                setError(err.response?.data?.message || 'Login gagal. Periksa kembali identitas Anda.')
+            if (mode === 'admin') {
+                const { data } = await api.post('/auth/login/admin', {
+                    id: form.identifier,
+                    password: form.password,
+                })
+                setAuth(
+                    { id: data.user.id, name: data.user.name, role: 'admin' },
+                    data.token,
+                )
+                navigate('/admin/dashboard')
             } else {
-                setError('Login gagal. Terjadi kesalahan sistem.')
+                const { data } = await api.post('/auth/login/participant', {
+                    boothNumber: form.identifier,
+                    password: form.password,
+                })
+                // Kirim teamMeta agar kiosk langsung terkunci ke stand ini
+                setAuth(
+                    { id: data.team.id, name: data.team.teamName, role: 'participant' },
+                    data.token,
+                    {
+                        teamId: data.team.id,
+                        teamName: data.team.teamName,
+                        boothNumber: data.team.boothNumber,
+                    }
+                )
+                navigate('/kiosk')
             }
+        } catch (err: unknown) {
+            console.log(err)
+            const msg = (err as { response?: { data?: { message?: string } } })
+                .response?.data?.message
+            setError(msg || 'Login gagal. Periksa kembali identitas Anda.')
         } finally {
             setLoading(false)
         }
@@ -43,7 +60,7 @@ export default function LoginPage() {
         <div className="min-h-screen flex" style={{ background: 'var(--body-bg)' }}>
             {/* Left panel — branding */}
             <div
-                className="hidden lg:flex flex-col justify-between w-[480px] shrink-0 p-10 relative overflow-hidden"
+                className="hidden lg:flex flex-col justify-between w-120 shrink-0 p-10 relative overflow-hidden"
                 style={{ background: 'var(--sidebar-bg)' }}
             >
                 {/* decorative blobs */}
@@ -59,9 +76,7 @@ export default function LoginPage() {
                 {/* Logo */}
                 <div className="relative z-10 flex items-center gap-3">
                     <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-display"
-                        style={{ background: 'linear-gradient(135deg, var(--zetech-accent), #6366f1)' }}
-                    >
+                        className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-display bg-indigo-500">
                         ZS
                     </div>
                     <div>
@@ -106,9 +121,7 @@ export default function LoginPage() {
                     {/* Mobile logo */}
                     <div className="flex items-center gap-3 mb-8 lg:hidden">
                         <div
-                            className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm text-display"
-                            style={{ background: 'linear-gradient(135deg, var(--zetech-accent), #6366f1)' }}
-                        >
+                            className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm text-display bg-indigo-500">
                             ZS
                         </div>
                         <span className="font-semibold text-display" style={{ color: 'var(--text-primary)' }}>ZeScore</span>
@@ -134,7 +147,7 @@ export default function LoginPage() {
                                 className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-200"
                                 style={
                                     mode === m
-                                        ? { background: 'var(--card-bg)', color: 'var(--zetech-blue)', boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }
+                                        ? { background: 'var(--card-bg)', color: 'var(--zetech-blue)' }
                                         : { color: 'var(--text-secondary)' }
                                 }
                             >
@@ -143,24 +156,33 @@ export default function LoginPage() {
                         ))}
                     </div>
 
+                    {/* Participant hint */}
+                    {mode === 'participant' && (
+                        <div
+                            className="flex items-start gap-2.5 text-xs px-4 py-3 rounded-xl mb-4"
+                            style={{ background: 'rgba(79,142,247,0.08)', color: 'var(--zetech-accent)' }}
+                        >
+                            <svg className="w-4 h-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>Login sekali di awal expo. Setelah masuk, kiosk otomatis terkunci ke stand tim ini — pengunjung cukup ketik NIM untuk vote.</span>
+                        </div>
+                    )}
+
                     {/* Form */}
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
                             <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-primary)' }}>
-                                {mode === 'admin' ? 'Email' : 'Kode Tim'}
+                                {mode === 'admin' ? 'Username' : 'Nomor Stand'}
                             </label>
                             <input
-                                type={mode === 'admin' ? 'email' : 'text'}
-                                placeholder={mode === 'admin' ? 'admin@zetech.id' : 'Contoh: PT3-A01'}
+                                type="text"
+                                placeholder={mode === 'admin' ? 'Masukkan Username' : 'Contoh: A01, B02'}
                                 value={form.identifier}
                                 onChange={(e) => setForm({ ...form, identifier: e.target.value })}
                                 required
                                 className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
-                                style={{
-                                    border: '2px solid var(--card-border)',
-                                    background: 'var(--card-bg)',
-                                    color: 'var(--text-primary)',
-                                }}
+                                style={{ border: '2px solid var(--card-border)', background: 'var(--card-bg)', color: 'var(--text-primary)' }}
                                 onFocus={(e) => { e.target.style.borderColor = 'var(--zetech-accent)' }}
                                 onBlur={(e) => { e.target.style.borderColor = 'var(--card-border)' }}
                             />
@@ -197,7 +219,7 @@ export default function LoginPage() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="btn-primary w-full py-3 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                            className="btn-primary w-full py-3 text-sm disabled:opacity-60 disabled:cursor-not-allowed text-[#FEF2F2] cursor-pointer rounded-lg"
                             style={{
                                 background: loading ? 'var(--zetech-blue)' : 'linear-gradient(135deg, var(--zetech-blue), var(--zetech-accent))',
                             }}
