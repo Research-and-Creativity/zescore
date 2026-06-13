@@ -203,30 +203,34 @@
 
 :root {
   /* Zetech Brand Colors */
-  --zetech-blue:   #1B3FA0;
-  --zetech-navy:   #0D1B4B;
-  --zetech-accent: #4F8EF7;
-  --zetech-light:  #EEF3FF;
+  --zetech-blue: #1b3fa0;
+  --zetech-navy: #0d1b4b;
+  --zetech-accent: #4f8ef7;
+  --zetech-light: #eef3ff;
 
   /* Sidebar */
-  --sidebar-bg: #0D1B4B;
+  --sidebar-bg: #0d1b4b;
   --sidebar-width: 260px;
   --sidebar-collapsed: 72px;
 
   /* Admin UI */
-  --card-bg:    #ffffff;
-  --card-border: #E8EEFE;
-  --body-bg:    #F4F7FE;
-  --text-primary: #1B254B;
-  --text-secondary: #A0AEC0;
+  --card-bg: #ffffff;
+  --card-border: #e8eefe;
+  --body-bg: #f4f7fe;
+  --text-primary: #1b254b;
+  --text-secondary: #a0aec0;
 
   --shadow-card: 0px 18px 40px rgba(112, 144, 176, 0.12);
-  --shadow-btn:  0px 4px 16px rgba(79, 142, 247, 0.35);
+  --shadow-btn: 0px 4px 16px rgba(79, 142, 247, 0.35);
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
-html, body, #root {
+html,
+body,
+#root {
   margin: 0;
   padding: 0;
   width: 100%;
@@ -240,7 +244,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   height: 100%;
   margin: 0;
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+
   background: var(--body-bg);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
@@ -264,4 +268,68 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-brand-500);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   ZETECH ADMIN — Custom utility classes (Dev 2)
+   Ditambahkan terpisah agar tidak konflik dengan Horizon UI di atas
+───────────────────────────────────────────────────────────────────────────── */
+
+/* Card */
+.card {
+  background: var(--card-bg);
+  border-radius: 20px;
+  /* box-shadow: 0px 18px 40px rgba(112, 144, 176, 0.12); */
+  border: 1px solid var(--card-border);
+}
+
+/* Primary button */
+.btn-primary {
+  background: linear-gradient(135deg, var(--zetech-blue), var(--zetech-accent));
+  color: white;
+  border-radius: 12px;
+  font-weight: 600;
+  /* box-shadow: 0px 4px 16px rgba(79, 142, 247, 0.35); */
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-primary:hover {
+  transform: translateY(-1px);
+  /* box-shadow: 0px 8px 24px rgba(79, 142, 247, 0.45); */
+}
+
+/* Display font */
+.text-display {
+  font-family: "Poppins", "DM Sans", system-ui, sans-serif;
+}
+
+/* Sidebar nav items */
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.55);
+  text-decoration: none;
+}
+.sidebar-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+}
+.sidebar-item.active {
+  background: rgba(79, 142, 247, 0.2);
+  color: white;
+}
+.sidebar-item.active svg {
+  color: var(--zetech-accent);
+  stroke: var(--zetech-accent);
 }
