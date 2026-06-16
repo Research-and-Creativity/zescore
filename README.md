@@ -64,3 +64,72 @@ src/
 ├── types/                   # Definisi tipe data TypeScript (.ts)
 └── utils/                   # Fungsi utilitas pembantu (Validasi regex NIM/NIDN)
 ```
+
+---
+
+## 🚀 Panduan Instalasi & Menjalankan Proyek
+
+### Prasyarat
+
+Pastikan perangkat kamu sudah terinstal:
+
+- [Node.js](https://nodejs.org) v18 atau lebih baru
+- [Git](https://git-scm.com)
+
+### Langkah-langkah
+
+**1. Clone repository**
+
+```bash
+git clone https://github.com/zetech/zescore-frontend.git
+cd zescore-frontend
+```
+
+**2. Install dependensi**
+
+```bash
+npm install
+```
+
+**3. Buat file `.env`**
+
+Buat file `.env` di root folder, lalu isi dengan:
+
+```env
+VITE_API_BASE_URL=http://localhost:3000/api
+```
+
+> 🔧 Sesuaikan URL dengan alamat backend yang sedang berjalan.
+
+**4. Jalankan aplikasi**
+
+```bash
+# Mode development
+npm run dev
+```
+
+> ✅ Frontend berjalan di `http://localhost:5173`
+
+**5. Build untuk production** _(opsional)_
+
+```bash
+npm run build
+npm run preview
+```
+
+---
+
+## 🗺️ Akses Halaman
+
+| Role        | URL      | Keterangan                         |
+| ----------- | -------- | ---------------------------------- |
+| Admin       | `/admin` | Login dengan akun admin            |
+| Participant | `/login` | Login dengan kode tim              |
+| Kiosk       | `/kiosk` | Langsung dapat diakses tanpa login |
+
+---
+
+## ⚠️ Catatan Penting
+
+- Pastikan **backend sudah berjalan** sebelum membuka frontend.
+- File `.env` **tidak boleh** di-_commit_ ke repository. Pastikan sudah terdaftar di `.gitignore`.
