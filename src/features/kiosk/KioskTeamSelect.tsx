@@ -50,16 +50,19 @@ const KioskTeamSelect: React.FC = () => {
     }
 
     return (
-        <div className="w-full max-w-3xl">
-            {/* Greeting */}
-            <div className="text-center mb-6">
+        // h-full agar memenuhi area <main> dari KioskLayout, flex-col supaya
+        // header/search tetap diam dan hanya grid yang scroll.
+        <div className="w-full max-w-3xl h-full flex flex-col">
+
+            {/* Header — fixed, tidak scroll */}
+            <div className="text-center mb-5 shrink-0">
                 <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-1">Halo,</p>
                 <h2 className="text-2xl font-black text-slate-900">{evaluator.name}</h2>
                 <p className="text-sm text-slate-500 mt-1">Pilih tim/kelompok yang ingin kamu nilai</p>
             </div>
 
-            {/* Search */}
-            <div className="relative mb-5 max-w-md mx-auto">
+            {/* Search — fixed, tidak scroll */}
+            <div className="relative mb-4 max-w-md mx-auto w-full shrink-0">
                 <svg className="absolute left-4 top-1/2 -translate-y-1/2" width="16" height="16"
                     viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
                     style={{ color: 'var(--text-secondary)' }}>
@@ -74,43 +77,53 @@ const KioskTeamSelect: React.FC = () => {
                 />
             </div>
 
-            {/* Grid */}
-            {isLoading ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {Array.from({ length: 6 }).map((_, i) => (
-                        <div key={i} className="rounded-2xl bg-white border border-slate-200 p-5 animate-pulse h-28" />
-                    ))}
-                </div>
-            ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {filtered.map(team => {
-                        const color = bc(team.boothNumber)
-                        return (
-                            <button key={team.id} onClick={() => handlePick(team)}
-                                className="text-left bg-white rounded-2xl border-2 border-slate-200 p-5 transition-all active:scale-[0.97] hover:shadow-lg"
-                                style={{ borderColor: 'transparent' }}
-                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = color }}
-                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'transparent' }}
-                            >
-                                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-black mb-3"
-                                    style={{ background: `linear-gradient(135deg, ${color}, ${color}99)` }}>
-                                    {team.boothNumber}
-                                </div>
-                                <p className="font-bold text-sm text-slate-900 leading-tight">{team.teamName}</p>
-                                <p className="text-xs text-slate-400 mt-1">Stand {team.boothNumber}</p>
-                            </button>
-                        )
-                    })}
-
-                    {filtered.length === 0 && (
-                        <div className="col-span-3 py-12 text-center text-slate-400">
-                            <p className="text-sm">Tidak ada tim yang cocok.</p>
-                        </div>
-                    )}
-                </div>
+            {/* Counter info */}
+            {!isLoading && (
+                <p className="text-center text-xs text-slate-400 mb-3 shrink-0">
+                    {filtered.length} dari {teams.length} tim
+                </p>
             )}
 
-            <div className="text-center mt-6">
+            {/* Grid — INI yang scroll, sisanya diam */}
+            <div className="flex-1 overflow-y-auto pr-1 -mr-1 min-h-0">
+                {isLoading ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pb-4">
+                        {Array.from({ length: 6 }).map((_, i) => (
+                            <div key={i} className="rounded-2xl bg-white border border-slate-200 p-5 animate-pulse h-28" />
+                        ))}
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pb-4">
+                        {filtered.map(team => {
+                            const color = bc(team.boothNumber)
+                            return (
+                                <button key={team.id} onClick={() => handlePick(team)}
+                                    className="text-left bg-white rounded-2xl border-2 border-slate-200 p-5 transition-all active:scale-[0.97] hover:shadow-lg"
+                                    style={{ borderColor: 'transparent' }}
+                                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = color }}
+                                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'transparent' }}
+                                >
+                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-black mb-3"
+                                        style={{ background: `linear-gradient(135deg, ${color}, ${color}99)` }}>
+                                        {team.boothNumber}
+                                    </div>
+                                    <p className="font-bold text-sm text-slate-900 leading-tight">{team.teamName}</p>
+                                    <p className="text-xs text-slate-400 mt-1">Stand {team.boothNumber}</p>
+                                </button>
+                            )
+                        })}
+
+                        {filtered.length === 0 && (
+                            <div className="col-span-2 sm:col-span-3 py-12 text-center text-slate-400">
+                                <p className="text-sm">Tidak ada tim yang cocok.</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* Footer button — fixed, tidak scroll */}
+            <div className="text-center mt-4 pt-1 shrink-0">
                 <button onClick={resetKiosk}
                     className="text-xs font-semibold px-5 py-2.5 rounded-xl transition-all"
                     style={{ color: 'var(--text-secondary)', border: '1.5px solid var(--card-border)', background: 'white' }}>

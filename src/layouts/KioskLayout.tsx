@@ -35,7 +35,7 @@ const KioskLayout: React.FC<KioskLayoutProps> = ({ children }) => {
         style={{ background: 'rgba(36,151,198,0.05)' }} aria-hidden="true" />
 
       {/* Main Content */}
-      <main className="flex-1 w-full h-full flex flex-col justify-center items-center p-6 relative z-10">
+      <main className="flex-1 w-full min-h-0 flex flex-col justify-center items-center p-6 relative z-10 overflow-hidden">
         {children}
       </main>
 
