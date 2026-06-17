@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react'
 import { useKioskStore } from '@/store/useKioskStore'
 
 const KioskSuccess: React.FC = () => {
-  const { teamContext, evaluator, resetKiosk } = useKioskStore()
+  const { selectedTeam, evaluator, resetKiosk } = useKioskStore()
   const [countdown, setCountdown] = useState(5)
 
   useEffect(() => {
@@ -20,12 +20,11 @@ const KioskSuccess: React.FC = () => {
 
   return (
     <div className="w-full max-w-sm text-center">
-      <div className="bg-white rounded-3xl border border-slate-200 p-10">
-        {/* Success icon */}
+      <div className="bg-white rounded-3xl border border-slate-200 p-10 shadow-xl shadow-slate-200/50">
         <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"
           style={{ background: 'linear-gradient(135deg, #16a34a, #4ade80)' }}>
           <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12" />
+            <polyline points="20 6 9 17 4 12"/>
           </svg>
         </div>
 
@@ -35,17 +34,14 @@ const KioskSuccess: React.FC = () => {
         <p className="text-sm text-slate-500 mb-1">
           Terima kasih, <span className="font-semibold text-slate-700">{evaluator?.name}</span>
         </p>
-        {teamContext && (
+        {selectedTeam && (
           <p className="text-sm text-slate-500 mb-6">
             {isStudent ? 'Suara kamu untuk' : 'Penilaian untuk'}{' '}
-            <span className="font-bold" style={{ color: 'var(--zetech-blue)' }}>
-              {teamContext.teamName}
-            </span>{' '}
+            <span className="font-bold" style={{ color: 'var(--zetech-blue)' }}>{selectedTeam.teamName}</span>{' '}
             berhasil disimpan.
           </p>
         )}
 
-        {/* Countdown */}
         <div className="flex flex-col items-center gap-2">
           <div className="w-12 h-12 rounded-full border-4 flex items-center justify-center font-black text-xl"
             style={{ borderColor: 'var(--zetech-accent)', color: 'var(--zetech-blue)' }}>
