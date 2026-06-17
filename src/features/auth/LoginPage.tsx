@@ -95,7 +95,7 @@ export default function LoginPage() {
                                 ID Admin
                             </label>
                             <input type="text"
-                                placeholder="Contoh: admin_zetech"
+                                placeholder="Masukkan ID admin..."
                                 value={form.identifier}
                                 onChange={e => setForm({ ...form, identifier: e.target.value })}
                                 required autoFocus
