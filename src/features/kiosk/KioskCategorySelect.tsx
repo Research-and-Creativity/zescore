@@ -1,5 +1,5 @@
 // src/features/kiosk/KioskCategorySelect.tsx
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useKioskStore, type Category } from '@/store/useKioskStore'
 import api from '@/config/api'
 
@@ -14,7 +14,7 @@ function ConfirmDialog({
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
             style={{ background: 'rgba(13,27,75,0.6)', backdropFilter: 'blur(6px)' }}>
-            <div className="bg-white rounded-3xl p-8 w-full max-w-sm text-center">
+            <div className="bg-white rounded-3xl p-8 w-full max-w-sm shadow-2xl text-center">
                 <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5"
                     style={{ background: 'var(--zetech-light)' }}>
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
@@ -59,44 +59,90 @@ function ConfirmDialog({
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
+const LABELS: Record<Category, { emoji: string; title: string; desc: string }> = {
+    POSTER: { emoji: '🖼️', title: 'Poster', desc: 'Vote untuk karya poster tim ini' },
+    PRODUCT: { emoji: '💡', title: 'Product', desc: 'Vote untuk produk/prototype tim ini' },
+}
+
 const KioskCategorySelect: React.FC = () => {
-    const { evaluator, teamContext, setStep, setSelectedCategory, setEvaluator, resetKiosk } = useKioskStore()
+    const {
+        evaluator, selectedTeam, remaining, setRemaining,
+        setStep, setSelectedCategory, backToTeamSelect, resetKiosk,
+    } = useKioskStore()
+
     const [pending, setPending] = useState<Category | 'BOTH' | null>(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [checking, setChecking] = useState(true)
+    const [blockedMsg, setBlockedMsg] = useState<string | null>(null)
 
-    if (!evaluator || !teamContext) return null
+    const isStudent = evaluator?.type === 'STUDENT'
 
-    const remaining = evaluator.remaining   // ["POSTER","PRODUCT"] | ["POSTER"] | ["PRODUCT"]
+    // Cek remaining categories untuk kombinasi evaluator + tim ini
+    useEffect(() => {
+        if (!evaluator || !selectedTeam) return
+        let active = true
+
+        const run = async () => {
+            setChecking(true)
+            setBlockedMsg(null)
+            try {
+                const { data } = await api.post('/kiosk/check-remaining', {
+                    idNumber: evaluator.idNumber,
+                    teamId: selectedTeam.teamId,
+                })
+                if (!active) return
+                setRemaining(data.data.remaining)
+                if (data.data.remaining.length === 0) {
+                    setBlockedMsg(data.data.message ?? 'Anda sudah menilai semua kategori untuk tim ini.')
+                }
+            } catch (err: unknown) {
+                if (!active) return
+                const msg = (err as { response?: { data?: { message?: string } } }).response?.data?.message
+                setBlockedMsg(msg ?? 'Gagal memuat data. Coba lagi.')
+                setRemaining([])
+            } finally {
+                if (active) setChecking(false)
+            }
+        }
+
+        run()
+        return () => { active = false }
+    }, [evaluator, selectedTeam, setRemaining])
+
+    if (!evaluator || !selectedTeam) return null
+
     const canBoth = remaining.length === 2
-    const isStudent = evaluator.type === 'STUDENT'
 
     const handleSelect = (choice: Category | 'BOTH') => {
         setError(null)
         setPending(choice)
     }
 
+    const submitVote = async (cat: Category) => {
+        await api.post('/kiosk/vote-student', {
+            evaluatorId: evaluator.idNumber,
+            teamId: selectedTeam.teamId,
+            category: cat,
+        })
+    }
+
     const handleConfirm = async () => {
-        if (!pending) return
+        if (!pending || pending === 'BOTH' && !isStudent) return
         setLoading(true)
         setError(null)
-
         try {
             if (pending === 'BOTH') {
-                // Submit POSTER dulu, lalu PRODUCT
                 for (const cat of ['POSTER', 'PRODUCT'] as Category[]) {
                     await submitVote(cat)
                 }
                 setStep('SUCCESS')
             } else {
-                await submitVote(pending)
-                // Setelah submit, cek apakah masih ada kategori lain
+                await submitVote(pending as Category)
                 const stillRemaining = remaining.filter(r => r !== pending)
                 if (stillRemaining.length > 0) {
-                    // Update remaining di store lalu kembali ke IDENTIFICATION
-                    setEvaluator({ ...evaluator, remaining: stillRemaining })
+                    setRemaining(stillRemaining)
                     setPending(null)
-                    resetKiosk()   // back ke input NIM
                 } else {
                     setStep('SUCCESS')
                 }
@@ -110,24 +156,52 @@ const KioskCategorySelect: React.FC = () => {
         }
     }
 
-    const submitVote = async (cat: Category) => {
-        const endpoint = isStudent ? '/kiosk/vote-student' : '/kiosk/score-lecturer'
-        // Untuk dosen, arahkan ke form input nilai dulu
-        if (!isStudent) {
-            setSelectedCategory(cat)
-            setStep('SCORE_DOSEN')
-            return
-        }
-        await api.post(endpoint, {
-            evaluatorId: evaluator.idNumber,
-            teamId: teamContext.teamId,
-            category: cat,
-        })
+    const handleSelectDosen = (cat: Category) => {
+        setSelectedCategory(cat)
+        setStep('SCORE_DOSEN')
     }
 
-    const LABELS: Record<Category, { emoji: string; title: string; desc: string }> = {
-        POSTER: { emoji: '🖼️', title: 'Poster', desc: 'Vote untuk karya poster tim ini' },
-        PRODUCT: { emoji: '💡', title: 'Product', desc: 'Vote untuk produk/prototype tim ini' },
+    if (checking) {
+        return (
+            <div className="w-full max-w-lg">
+                <div className="bg-white rounded-3xl border border-slate-200 p-12 shadow-xl text-center">
+                    <svg className="animate-spin mx-auto mb-3" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                        style={{ color: 'var(--zetech-accent)' }}>
+                        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                    </svg>
+                    <p className="text-sm text-slate-500">Memeriksa data...</p>
+                </div>
+            </div>
+        )
+    }
+
+    if (blockedMsg) {
+        return (
+            <div className="w-full max-w-lg">
+                <div className="bg-white rounded-3xl border border-slate-200 p-10 shadow-xl text-center">
+                    <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+                        style={{ background: '#FEF3C7' }}>
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#92400E" strokeWidth="2">
+                            <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+                        </svg>
+                    </div>
+                    <h3 className="text-lg font-black text-slate-900 mb-2">Tidak Bisa Lanjut</h3>
+                    <p className="text-sm text-slate-500 mb-6">{blockedMsg}</p>
+                    <div className="flex gap-3">
+                        <button onClick={backToTeamSelect}
+                            className="flex-1 py-3 rounded-xl text-sm font-semibold border-2"
+                            style={{ borderColor: 'var(--card-border)', color: 'var(--text-primary)' }}>
+                            Pilih Tim Lain
+                        </button>
+                        <button onClick={resetKiosk}
+                            className="flex-1 py-3 rounded-xl text-sm font-bold text-white"
+                            style={{ background: 'linear-gradient(135deg, var(--zetech-blue), var(--zetech-accent))' }}>
+                            Selesai
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )
     }
 
     return (
@@ -136,12 +210,11 @@ const KioskCategorySelect: React.FC = () => {
             <div className="flex justify-center mb-6">
                 <div className="flex items-center gap-2 px-5 py-2.5 rounded-2xl text-white text-sm font-bold"
                     style={{ background: 'linear-gradient(135deg, var(--zetech-blue), var(--zetech-accent))' }}>
-                    Stand {teamContext.boothNumber} — {teamContext.teamName}
+                    Stand {selectedTeam.boothNumber} — {selectedTeam.teamName}
                 </div>
             </div>
 
-            <div className="bg-white rounded-3xl border border-slate-200 p-8">
-                {/* Greeting */}
+            <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-xl shadow-slate-200/50">
                 <div className="text-center mb-7">
                     <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-1">Halo,</p>
                     <h2 className="text-xl font-black text-slate-900">{evaluator.name}</h2>
@@ -151,15 +224,15 @@ const KioskCategorySelect: React.FC = () => {
                     {!isStudent && canBoth && (
                         <p className="text-xs mt-1.5 px-3 py-1.5 rounded-xl inline-block"
                             style={{ background: 'var(--zetech-light)', color: 'var(--zetech-blue)' }}>
-                            💡 Nilai Poster dulu, lalu masukkan NIDN lagi untuk nilai Product
+                            💡 Nilai Poster dulu, lalu pilih tim ini lagi untuk nilai Product
                         </p>
                     )}
                 </div>
 
-                {/* Category buttons */}
                 <div className="space-y-3 mb-5">
                     {remaining.map(cat => (
-                        <button key={cat} onClick={() => handleSelect(cat)}
+                        <button key={cat}
+                            onClick={() => isStudent ? handleSelect(cat) : handleSelectDosen(cat)}
                             className="w-full flex items-center gap-4 p-4 rounded-2xl border-2 text-left transition-all active:scale-[0.98]"
                             style={{ borderColor: 'var(--card-border)', background: 'var(--body-bg)' }}
                             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--zetech-accent)'; (e.currentTarget as HTMLElement).style.background = 'var(--zetech-light)' }}
@@ -175,7 +248,6 @@ const KioskCategorySelect: React.FC = () => {
                         </button>
                     ))}
 
-                    {/* Keduanya — hanya untuk mahasiswa, dosen harus nilai satu per satu */}
                     {canBoth && isStudent && (
                         <button onClick={() => handleSelect('BOTH')}
                             className="w-full flex items-center gap-4 p-4 rounded-2xl border-2 text-left transition-all active:scale-[0.98]"
@@ -198,39 +270,23 @@ const KioskCategorySelect: React.FC = () => {
                     </div>
                 )}
 
-                <button onClick={resetKiosk}
+                <button onClick={backToTeamSelect}
                     className="w-full py-2.5 rounded-xl text-xs font-semibold transition-all"
                     style={{ color: 'var(--text-secondary)', border: '1.5px solid var(--card-border)' }}>
-                    ← Kembali / Ganti Identitas
+                    ← Pilih Tim Lain
                 </button>
             </div>
 
-            {/* Confirm dialog */}
             {pending && isStudent && (
                 <ConfirmDialog
                     category={pending}
-                    teamName={teamContext.teamName}
+                    teamName={selectedTeam.teamName}
                     evaluatorName={evaluator.name}
                     onConfirm={handleConfirm}
                     onCancel={() => setPending(null)}
                     loading={loading}
                 />
             )}
-
-            {/* Untuk dosen: set category lalu langsung ke form nilai */}
-            {pending && !isStudent && (() => {
-                if (pending !== 'BOTH') {
-                    setSelectedCategory(pending as import('@/store/useKioskStore').Category)
-                    setStep('SCORE_DOSEN')
-                    setPending(null)
-                } else {
-                    // Keduanya: mulai dari POSTER dulu
-                    setSelectedCategory('POSTER')
-                    setStep('SCORE_DOSEN')
-                    setPending(null)
-                }
-                return null
-            })()}
         </div>
     )
 }

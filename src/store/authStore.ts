@@ -2,20 +2,18 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { User } from "@/types";
-import { useKioskStore } from "./useKioskStore";
 
 interface AuthState {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
-  setAuth: (
-    user: User,
-    token: string,
-    teamMeta?: { teamId: string; teamName: string; boothNumber: string },
-  ) => void;
+  setAuth: (user: User, token: string) => void;
   logout: () => void;
 }
 
+// Auth store sekarang HANYA untuk Admin.
+// Kiosk (mesin kasir) bersifat publik dan tidak butuh auth sama sekali —
+// state-nya dikelola sepenuhnya oleh useKioskStore.
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
@@ -23,18 +21,9 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       isAuthenticated: false,
 
-      setAuth: (user, token, teamMeta) => {
+      setAuth: (user, token) => {
         localStorage.setItem("zescore_token", token);
         set({ user, token, isAuthenticated: true });
-
-        // Kalau login sebagai participant, kunci kiosk ke stand ini
-        if (user.role === "participant" && teamMeta) {
-          useKioskStore.getState().setTeamContext({
-            teamId: teamMeta.teamId,
-            teamName: teamMeta.teamName,
-            boothNumber: teamMeta.boothNumber,
-          });
-        }
       },
 
       logout: () => {
