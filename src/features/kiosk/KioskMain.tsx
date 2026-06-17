@@ -2,34 +2,34 @@
 import React, { useState } from 'react'
 import { useKioskStore } from '@/store/useKioskStore'
 import api from '@/config/api'
+import logo from '@/assets/zetech-logo.svg'
 
 const KioskMain: React.FC = () => {
-  const { teamContext, setEvaluator, setStep } = useKioskStore()
+  const { setEvaluator, setStep } = useKioskStore()
   const [idInput, setIdInput] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  // Tidak ada deteksi tipe di FE — sepenuhnya dari validasi BE (cek role di DB)
   const canSubmit = idInput.trim().length >= 7
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!teamContext) { setError('Stand belum terkunci. Hubungi panitia.'); return }
     setError(null)
     setLoading(true)
     try {
-      const { data } = await api.post('/kiosk/validate-evaluator', {
+      // Cek identitas dulu (tanpa teamId) — pilih tim dilakukan setelah ini
+      const { data } = await api.post('/kiosk/check-identity', {
         idNumber: idInput.trim(),
-        teamId: teamContext.teamId,
       })
       setEvaluator({
         idNumber: data.data.idNumber,
         name: data.data.name,
         type: data.data.type,
-        remaining: data.data.remaining,
       })
-      setStep('CATEGORY_SELECT')
+      setStep('TEAM_SELECT')
+      console.log(data)
     } catch (err: unknown) {
+      console.log(err)
       const msg = (err as { response?: { data?: { message?: string } } }).response?.data?.message
       setError(msg ?? 'Terjadi kesalahan. Coba lagi.')
     } finally {
@@ -39,20 +39,15 @@ const KioskMain: React.FC = () => {
 
   return (
     <div className="w-full max-w-lg">
-      {/* Stand badge */}
-      {teamContext && (
-        <div className="flex items-center justify-center gap-2 mb-8">
-          <div className="flex items-center gap-2 px-5 py-2.5 rounded-2xl text-white text-sm font-bold"
-            style={{ background: 'linear-gradient(135deg, var(--zetech-blue), var(--zetech-accent))' }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
-            </svg>
-            Stand {teamContext.boothNumber} — {teamContext.teamName}
-          </div>
+      <div className="flex justify-center mb-5">
+        <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 backdrop-blur-sm border border-slate-200 shadow-sm">
+          <img src={logo} alt="Zetech" className="h-4 w-auto" />
+          <span className="text-xs font-bold tracking-wide text-slate-500">PT3 EXPO 2026</span>
         </div>
-      )}
-
-      <div className="bg-white rounded-3xl border border-slate-200 p-10">
+      </div>
+      <div className="bg-white rounded-3xl border border-slate-200 p-10 shadow-xl shadow-slate-200/50">
+        <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full opacity-[0.06] pointer-events-none"
+          style={{ background: 'radial-gradient(circle, var(--zetech-accent), transparent)' }} />
         <div className="text-center mb-8">
           <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
             style={{ background: 'var(--zetech-light)' }}>
@@ -61,11 +56,11 @@ const KioskMain: React.FC = () => {
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
             </svg>
           </div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Masukkan Identitas</h2>
-          <p className="text-sm text-slate-500 mt-2">Input NIM (mahasiswa) atau NIDN (dosen juri)</p>
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Selamat Datang!</h2>
+          <p className="text-sm text-slate-500 mt-2">Masukkan NIM (mahasiswa) atau NIDN (dosen juri)</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-5 relative z-10">
           <div>
             <input
               type="text"
@@ -76,12 +71,11 @@ const KioskMain: React.FC = () => {
               onChange={e => { setIdInput(e.target.value.replace(/\D/g, '')); setError(null) }}
               placeholder="Ketik NIM atau NIDN..."
               autoFocus
-              className="w-full text-center text-3xl font-mono font-bold tracking-widest py-5 px-4 rounded-2xl bg-slate-50 border-2 border-slate-200 text-slate-900 placeholder:text-slate-300 placeholder:text-xl placeholder:tracking-normal focus:outline-none focus:border-blue-400 focus:bg-white transition-all"
+              className="w-full text-center text-3xl font-mono font-bold tracking-widest py-5 px-4 rounded-2xl bg-slate-50 border-2 border-slate-200 text-slate-900 placeholder:text-slate-300 placeholder:text-xl placeholder:tracking-normal focus:outline-none focus:border-blue-400 focus:bg-white transition-all shadow-inner"
               required
             />
           </div>
 
-          {/* Hint panjang input */}
           {idInput.length > 0 && idInput.length < 7 && (
             <p className="text-center text-xs" style={{ color: 'var(--text-secondary)' }}>
               Minimal 7 digit
@@ -100,7 +94,7 @@ const KioskMain: React.FC = () => {
 
           <button type="submit" disabled={loading || !canSubmit}
             className="w-full py-4 rounded-2xl text-white font-bold text-base tracking-wide transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ background: 'linear-gradient(135deg, var(--zetech-blue), var(--zetech-accent))' }}>
+            style={{ background: 'linear-gradient(135deg, var(--zetech-blue), var(--zetech-accent))', boxShadow: '0 4px 20px rgba(79,142,247,0.35)' }}>
             {loading ? (
               <span className="flex items-center justify-center gap-2">
                 <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
